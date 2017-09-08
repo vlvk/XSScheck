@@ -5,7 +5,7 @@ XSS scanner by nodejs
 
 ## Usage
 
-At first, make sure `phatom.js` in your PATH, then
+At first, make sure `phantom.js` in your PATH, then
 ```
 node xsscheck.js
 ```
