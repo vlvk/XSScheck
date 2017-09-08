@@ -1,0 +1,16 @@
+{
+  "name": "xsscheck",
+  "version": "1.0.0",
+  "description": "",
+  "main": "xsscheck.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "VLVK",
+  "license": "ISC",
+  "dependencies": {
+    "co": "^4.6.0",
+    "phantom": "^4.0.5",
+    "readline-sync": "^1.4.7"
+  }
+}

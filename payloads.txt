@@ -1,0 +1,2 @@
+<img src=x onerror=alert(/xss/)>
+<script>alert(/xss/)</script>
