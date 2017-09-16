@@ -9,6 +9,7 @@
   "author": "VLVK",
   "license": "ISC",
   "dependencies": {
+    "async": "^2.5.0",
     "co": "^4.6.0",
     "phantom": "^4.0.5",
     "readline-sync": "^1.4.7"

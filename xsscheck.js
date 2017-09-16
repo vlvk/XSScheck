@@ -1,14 +1,15 @@
 const fs = require('fs');
 const co = require('co');
 const url = require('url');
+const async = require('async');
 const phantom = require('phantom');
 const readlineSync = require('readline-sync');
 const qs = require('querystring');
 
 const banner = '\n=======> XSScheck Power By VLVK <========\n';
+let payloads = [];
 
 function xsscheck () {
-  let payloads = [];
   function again () {
     inq = readlineSync.question("[?] [E]xit or launch [A]gain? (e/a)").toLowerCase();
     switch (inq) {
@@ -23,7 +24,12 @@ function xsscheck () {
   }
   function loadpayload (file = 'payloads.txt') {
     payloads = [];
-    let lst = fs.readFileSync(file, 'utf-8').split('\r\n');
+    let lst = [];
+    if (process.platform === 'win32') {
+      lst = fs.readFileSync(file, 'utf-8').split('\r\n');
+    } else {
+      lst = fs.readFileSync(file, 'utf-8').split('\n');
+    }
     for (x in lst) {
       let payload = lst[x].trim();
       if (payload !== '') {
@@ -32,23 +38,17 @@ function xsscheck () {
       }
     }
   }
-  function checkInResponse (target, path, payload, para, method, data = null) {
-    if (method === 'GET') {
+  function checkInResponse (target, callback) {
+    if (target['method'] === 'GET') {
       co(function*() {
         let instance = yield phantom.create();
         try {
           let page = yield instance.createPage();
-          let status = yield page.open(target);
-          // console.log(status);
+          let status = yield page.open(target.href);
           let content = yield page.property('content');
-          if (content.indexOf(payload) !== -1 ) {
-            console.log('====================');
-            console.log('Path: ' + path);
-            console.log('Method: GET');
-            console.log('Parameter: ' + para);
-            console.log('Payload: ' + payload);
-            console.log('Href: ' + target);
-            console.log('====================');
+          if (content.indexOf(target.payload) !== -1 ) {
+            showResult(target);
+            callback();
           }
         } catch (e) {
           console.log('Error found: ' + e.message);
@@ -61,18 +61,12 @@ function xsscheck () {
         let instance = yield phantom.create();
         try {
           let page = yield instance.createPage();
-          let postdata = qs.unescape(qs.stringify(data));
-          let status = yield page.open(target, 'POST', postdata);
-          // console.log(status);
+          target['postdata'] = qs.unescape(qs.stringify(target.paras));
+          let status = yield page.open(target.site, 'POST', target.postdata);
           let content = yield page.property('content');
-          if (content.indexOf(payload) !== -1 ) {
-            console.log('====================');
-            console.log('Path: ' + path);
-            console.log('Method: Post');
-            console.log('Parameter: ' + para);
-            console.log('Payload: '+ payload);
-            console.log('Data: ' + postdata);
-            console.log('====================');
+          if (content.indexOf(target['payload']) !== -1 ) {
+            showResult(target);
+            callback();
           }
         } catch (e) {
           console.log('Error found: ' + e.message);
@@ -82,6 +76,19 @@ function xsscheck () {
       }).catch(console.error);
     }
   }
+  function showResult (result) {
+    console.log('======================================');
+    console.log('Path: ' + result['site']);
+    console.log('Method: ' + result['method']);
+    console.log('Parameter: ' + result['para']);
+    console.log('Payload: '+ result['payload']);
+    if (result['method'] === 'POST') {
+      console.log('Postdata: ' + result['postdata']);
+    } else {
+      console.log('Href: ' + result['href']);
+    }
+    console.log('======================================');
+  }
   function GET_Method () {
     let site = readlineSync.question('[?] Enter URL:\n[?] > '); // URL
     if (site.indexOf('http://') === -1 && site.indexOf('https://') === -1) {
@@ -89,12 +96,17 @@ function xsscheck () {
     }
     let oriurl = url.parse(site, true);
     let payloadlist = readlineSync.question('[?] Enter location of Payloadlist (payloads.txt)\n[?] > ');
+    let threadlimit = readlineSync.question('[?] Enter Threads of Testing (4)\n[?] > ');
+    if (threadlimit === '') {
+      threadlimit = 4;
+    }
     if (payloadlist === '') {
       loadpayload();
       console.log('[+] Use Default payloads...');
     } else {
       loadpayload(payloadlist);
     }
+    let allDatas = [];
     let parameters = oriurl.query;
     let path = oriurl.protocol + '//' + oriurl.host + oriurl.pathname;
     let flag = false;
@@ -103,15 +115,36 @@ function xsscheck () {
       for (para in parameters) {
         let readyurl = JSON.parse(JSON.stringify(parameters));
         readyurl[para] += payloads[x];
-        let target = path + '?' + qs.stringify(readyurl) + hashes;
-        checkInResponse(target, path, payloads[x], para, 'GET')
+        let target = path + '?' + qs.stringify(readyurl);
+        target += oriurl.hash ? oriurl.hash : '';
+        let onePiece = [];
+        onePiece.payload = payloads[x];
+        onePiece.para = para;
+        onePiece.href = target;
+        onePiece.site = path;
+        onePiece.method = 'GET';
+        allDatas.push(onePiece);
       }
       // DOM XSS
-      if (oriurl.hash !== '') {
+      if (oriurl.hash) {
         let target = site + encodeURI(payloads[x]);
-        checkInResponse(target, path, payloads[x], oriurl.hash, 'GET')
+        let onePiece = [];
+        onePiece.payload = payloads[x];
+        onePiece.para = oriurl.hash;
+        onePiece.href = target;
+        onePiece.site = path;
+        onePiece.method = 'GET';
+        allDatas.push(onePiece);
       }
     }
+    async.mapLimit(
+      allDatas,
+      threadlimit,
+      (allData, callback) => {
+        checkInResponse(allData, callback);
+      },
+      (err) => {}
+    );
   }
   function POST_Method () {
     let site = readlineSync.question('[?] Enter URL:\n[?] > '); // URL
@@ -121,19 +154,39 @@ function xsscheck () {
     let parameter = readlineSync.question('[?] Enter Parameters:\n[?] > ');
     let parameters = qs.parse(parameter);
     let payloadlist = readlineSync.question('[?] Enter location of Payloadlist (payloads.txt)\n[?] > ');
+    let threadlimit = readlineSync.question('[?] Enter Threads of Testing (4)\n[?] > ');
+    if (threadlimit === '') {
+      threadlimit = 4;
+    }
     if (payloadlist === '') {
       loadpayload();
       console.log('[+] Use Default payloads...');
     } else {
       loadpayload(payloadlist);
     }
+    let allDatas = [];
     for (x in payloads) {
       for (para in parameters) {
         let paras = JSON.parse(JSON.stringify(parameters));
         paras[para] += payloads[x];
-        checkInResponse(site, site, payloads[x], para, 'POST', paras);
+        // checkInResponse(site, site, payloads[x], para, 'POST', paras);
+        let onePiece = [];
+        onePiece.payload = payloads[x];
+        onePiece.para = para;
+        onePiece.paras = paras;
+        onePiece.site = site;
+        onePiece.method = 'POST';
+        allDatas.push(onePiece);
       }
     }
+    async.mapLimit(
+      allDatas,
+      threadlimit,
+      (allData, callback) => {
+        checkInResponse(allData, callback);
+      },
+      (err) => {}
+    );
   }
 
   // main

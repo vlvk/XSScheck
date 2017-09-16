@@ -25,6 +25,8 @@ node xsscheck.js
 [?] > searchFor=2&goButton=go
 [?] Enter location of Payloadlist (payloads.txt)
 [?] >
+[?] Enter Threads of Testing (4)
+[?] >
 [+] Use Default payloads...
 ====================
 Path: http://testphp.vulnweb.com/search.php?test=query
@@ -45,5 +47,5 @@ Data: searchFor=2<script>alert(/xss/)</script>&goButton=go
 
 ## Todo
 
-- [ ] concurrent_control
+- [x] concurrent_control
 - [ ] 10&16hex_encode
