@@ -1,28 +1,18 @@
-const fs = require('fs');
+#!/usr/bin/env node
+
 const co = require('co');
+const fs = require('fs');
 const url = require('url');
 const async = require('async');
-const phantom = require('phantom');
-const readlineSync = require('readline-sync');
 const qs = require('querystring');
+const phantom = require('phantom');
+const program = require('commander');
 
-const banner = '\n=======> XSScheck Power By VLVK <========\n';
+const banner = '\n=======> XSScheck By VLVK <========\n';
 let payloads = [];
 
 function xsscheck () {
-  function again () {
-    inq = readlineSync.question("[?] [E]xit or launch [A]gain? (e/a)").toLowerCase();
-    switch (inq) {
-      case 'e' :
-        process.exit(0);
-      case 'a' :
-        xsscheck();
-      default:
-        console.log('[!] Incorrect option selected');
-        again();
-    }
-  }
-  function loadpayload (file = 'payloads.txt') {
+  function loadpayload (file) {
     payloads = [];
     let lst = [];
     if (process.platform === 'win32') {
@@ -30,7 +20,7 @@ function xsscheck () {
     } else {
       lst = fs.readFileSync(file, 'utf-8').split('\n');
     }
-    for (x in lst) {
+    for (let x in lst) {
       let payload = lst[x].trim();
       if (payload !== '') {
         payload = payload.replace(/=([^"]*?)([ |>])/g, ('="$1"$2'));
@@ -39,42 +29,30 @@ function xsscheck () {
     }
   }
   function checkInResponse (target, callback) {
-    if (target['method'] === 'GET') {
-      co(function*() {
-        let instance = yield phantom.create();
-        try {
-          let page = yield instance.createPage();
+    co(function*() {
+      let instance = yield phantom.create();
+      try {
+        let page = yield instance.createPage();
+        if (target['method'] === 'GET') {
           let status = yield page.open(target.href);
-          let content = yield page.property('content');
-          if (content.indexOf(target.payload) !== -1 ) {
-            showResult(target);
-            callback();
-          }
-        } catch (e) {
-          console.log('Error found: ' + e.message);
-        } finally {
-          instance.exit();
-        }
-      }).catch(console.error);
-    } else {
-      co(function*() {
-        let instance = yield phantom.create();
-        try {
-          let page = yield instance.createPage();
+        } else {
           target['postdata'] = qs.unescape(qs.stringify(target.paras));
           let status = yield page.open(target.site, 'POST', target.postdata);
-          let content = yield page.property('content');
-          if (content.indexOf(target['payload']) !== -1 ) {
-            showResult(target);
-            callback();
-          }
-        } catch (e) {
-          console.log('Error found: ' + e.message);
-        } finally {
-          instance.exit();
         }
-      }).catch(console.error);
-    }
+        // console.log(status);
+        let content = yield page.property('content');
+        if (content.indexOf(target.payload) !== -1 ) {
+          showResult(target);
+          callback(null, '1');
+        } else {
+          callback(null, '0');
+        }
+      } catch (e) {
+        console.log('Error found: ' + e.message);
+      } finally {
+        instance.exit();
+      }
+    }).catch(console.error);
   }
   function showResult (result) {
     console.log('======================================');
@@ -89,23 +67,14 @@ function xsscheck () {
     }
     console.log('======================================');
   }
-  function GET_Method () {
-    let site = readlineSync.question('[?] Enter URL:\n[?] > '); // URL
+  function GET_Method (arguments) {
+    let site = arguments.url;
     if (site.indexOf('http://') === -1 && site.indexOf('https://') === -1) {
       site = 'http://' + site;
     }
     let oriurl = url.parse(site, true);
-    let payloadlist = readlineSync.question('[?] Enter location of Payloadlist (payloads.txt)\n[?] > ');
-    let threadlimit = readlineSync.question('[?] Enter Threads of Testing (4)\n[?] > ');
-    if (threadlimit === '') {
-      threadlimit = 4;
-    }
-    if (payloadlist === '') {
-      loadpayload();
-      console.log('[+] Use Default payloads...');
-    } else {
-      loadpayload(payloadlist);
-    }
+    loadpayload(arguments.payloadfile);
+    console.log('[+] Use Default payloads...');
     let allDatas = [];
     let parameters = oriurl.query;
     let path = oriurl.protocol + '//' + oriurl.host + oriurl.pathname;
@@ -139,31 +108,29 @@ function xsscheck () {
     }
     async.mapLimit(
       allDatas,
-      threadlimit,
+      arguments.threads,
       (allData, callback) => {
         checkInResponse(allData, callback);
       },
-      (err) => {}
+      (err, result) => {
+        for (let x in result) {
+          if (result[x] === '1') {
+            process.exit(0);
+          }
+        }
+        console.log(arguments.url + ' is not vunluntity!');
+      }
     );
   }
-  function POST_Method () {
-    let site = readlineSync.question('[?] Enter URL:\n[?] > '); // URL
+  function POST_Method (arguments) {
+    let site = arguments.url; // URL
     if (site.indexOf('http://') === -1 && site.indexOf('https://') === -1) {
       site = 'http://' + site;
     };
-    let parameter = readlineSync.question('[?] Enter Parameters:\n[?] > ');
+    let parameter = arguments.data;
     let parameters = qs.parse(parameter);
-    let payloadlist = readlineSync.question('[?] Enter location of Payloadlist (payloads.txt)\n[?] > ');
-    let threadlimit = readlineSync.question('[?] Enter Threads of Testing (4)\n[?] > ');
-    if (threadlimit === '') {
-      threadlimit = 4;
-    }
-    if (payloadlist === '') {
-      loadpayload();
-      console.log('[+] Use Default payloads...');
-    } else {
-      loadpayload(payloadlist);
-    }
+    loadpayload(arguments.payloadfile);
+    console.log('[+] Loading payloads...');
     let allDatas = [];
     for (x in payloads) {
       for (para in parameters) {
@@ -181,26 +148,40 @@ function xsscheck () {
     }
     async.mapLimit(
       allDatas,
-      threadlimit,
+      arguments.threads,
       (allData, callback) => {
         checkInResponse(allData, callback);
       },
-      (err) => {}
+      (err, result) => {
+        for (let x in result) {
+          if (result[x] === '1') {
+            process.exit(0);
+          }
+        }
+        console.log(arguments.url + ' is not vunluntity!');
+      }
     );
   }
 
   // main
   console.log(banner);
-  methodselect = readlineSync.question("[?] Select method: [G]ET or [P]OST (G/P): ").toLowerCase();
-  switch (methodselect) {
-    case 'g':
-      GET_Method();
+  program
+    .version('0.0.1')
+    .option('-m, --method [value]', 'GET/POST Method [GET]', 'GET')
+    .option('-d, --data [value]', 'POST Data (only POST method)')
+    .option('-t, --threads <n>', 'Threads of Testing', 4)
+    .option('-u, --url [value]', 'Target of URL')
+    .option('-r, --payloadfile [value]', 'location of Payload', 'payloads.txt')
+    .parse(process.argv);
+  switch (program.method) {
+    case 'GET':
+      GET_Method(program);
       break;
-    case 'p':
-      POST_Method();
+    case 'POST':
+      POST_Method(program);
       break;
     default:
-      again();
+      process.exit(0);
   }
 }
 
