@@ -5,10 +5,24 @@ XSS scanner by nodejs
 
 ## Usage
 
-At first, make sure `phantom.js` in your PATH, then
 ```
+git clone https://github.com/vlvk/XSScheck.git
+cd XSScheck
+```
+
+1. Manual
+```
+npm install
 node xsscheck.js
 ```
+
+2. Docker
+```
+docker build -t xsscheck .
+docker run -it xsscheck
+```
+
+You can put custom payloads into 'payloads.txt' file.
 
 
 ## Example
