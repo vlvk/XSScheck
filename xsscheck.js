@@ -8,6 +8,14 @@ const qs = require('querystring');
 const phantom = require('phantom');
 const program = require('commander');
 
+let Colors = {
+  'RED': '\033[91m',
+  'GREEN': '\033[92m',
+  'YELLOW': '\033[93m',
+  'BLUE': '\033[94m',
+  'END': '\033[0m'
+}
+
 const banner = '\n=======> XSScheck By VLVK <========\n';
 let payloads = [];
 
@@ -43,7 +51,7 @@ function xsscheck () {
         let content = yield page.property('content');
         if (content.indexOf(target.payload) !== -1 ) {
           showResult(target);
-          callback(null, '1');
+          callback();
         } else {
           callback(null, '0');
         }
@@ -55,8 +63,8 @@ function xsscheck () {
     }).catch(console.error);
   }
   function showResult (result) {
-    console.log('======================================');
-    console.log('Path: ' + result['site']);
+    console.log('=============++++++++++++=============');
+    console.log(Colors.GREEN + 'Path: ' + result['site']);
     console.log('Method: ' + result['method']);
     console.log('Parameter: ' + result['para']);
     console.log('Payload: '+ result['payload']);
@@ -65,7 +73,7 @@ function xsscheck () {
     } else {
       console.log('Href: ' + result['href']);
     }
-    console.log('======================================');
+    console.log(Colors.END + '======================================');
   }
   function GET_Method (arguments) {
     let site = arguments.url;
@@ -74,7 +82,7 @@ function xsscheck () {
     }
     let oriurl = url.parse(site, true);
     loadpayload(arguments.payloadfile);
-    console.log('[+] Use Default payloads...');
+    console.log('[+] Loading payloads...\n');
     let allDatas = [];
     let parameters = oriurl.query;
     let path = oriurl.protocol + '//' + oriurl.host + oriurl.pathname;
@@ -114,29 +122,32 @@ function xsscheck () {
       },
       (err, result) => {
         for (let x in result) {
-          if (result[x] === '1') {
-            process.exit(0);
+          if (result[x] !== '0') {
+            return;
           }
         }
-        console.log(arguments.url + ' is not vunluntity!');
+        console.log(Colors.RED + arguments.url + ' is not vunluntity!' + Colors.END);
       }
     );
   }
   function POST_Method (arguments) {
+    if (arguments.data === undefined) {
+      console.log(Colors.RED + '[x] Error: POST Method need Postdata! by \'-d\'' + Colors.END);
+      process.exit(0);
+    }
     let site = arguments.url; // URL
     if (site.indexOf('http://') === -1 && site.indexOf('https://') === -1) {
       site = 'http://' + site;
     };
+    let allDatas = [];
     let parameter = arguments.data;
     let parameters = qs.parse(parameter);
     loadpayload(arguments.payloadfile);
-    console.log('[+] Loading payloads...');
-    let allDatas = [];
-    for (x in payloads) {
-      for (para in parameters) {
+    console.log('[+] Loading payloads...\n');
+    for (let para in parameters) {
+      for (let x in payloads) {
         let paras = JSON.parse(JSON.stringify(parameters));
         paras[para] += payloads[x];
-        // checkInResponse(site, site, payloads[x], para, 'POST', paras);
         let onePiece = [];
         onePiece.payload = payloads[x];
         onePiece.para = para;
@@ -154,25 +165,30 @@ function xsscheck () {
       },
       (err, result) => {
         for (let x in result) {
-          if (result[x] === '1') {
-            process.exit(0);
+          if (result[x] !== '0') {
+            return;
           }
         }
-        console.log(arguments.url + ' is not vunluntity!');
+        console.log(Colors.RED + arguments.url + ' is not vunluntity!' + Colors.END);
       }
     );
   }
 
   // main
-  console.log(banner);
   program
-    .version('0.0.1')
+    .version('1.0.0')
+    .usage('<Options>\n\t xsscheck -u www.example.com/xyz.php?a=1')
     .option('-m, --method [value]', 'GET/POST Method [GET]', 'GET')
     .option('-d, --data [value]', 'POST Data (only POST method)')
     .option('-t, --threads <n>', 'Threads of Testing', 4)
     .option('-u, --url [value]', 'Target of URL')
-    .option('-r, --payloadfile [value]', 'location of Payload', 'payloads.txt')
+    .option('-r, --payloadfile <path>', 'location of Payload', './payloads.txt')
     .parse(process.argv);
+  console.log(banner);
+  if (program.url === undefined) {
+    console.log(Colors.RED + '[x] Syntax Error! Please use -h to get help!' + Colors.END);
+    process.exit(0);
+  }
   switch (program.method) {
     case 'GET':
       GET_Method(program);

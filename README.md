@@ -3,12 +3,14 @@
 XSS scanner by nodejs
 
 
-## Usage
+## Install
 
 ```
 git clone https://github.com/vlvk/XSScheck.git
 cd XSScheck
 ```
+
+You can put custom payloads into 'payloads.txt' file.
 
 1. Manual
 ```
@@ -22,42 +24,32 @@ docker build -t xsscheck .
 docker run -it xsscheck
 ```
 
-You can put custom payloads into 'payloads.txt' file.
 
-
-## Example
+## Usage
 
 ```
- > node xsscheck.js
- 
-=======> XSScheck Power By VLVK <========
+ > node xsscheck.js -h
 
-[?] Select method: [G]ET or [P]OST (G/P): P
-[?] Enter URL:
-[?] > http://testphp.vulnweb.com/search.php?test=query
-[?] Enter Parameters:
-[?] > searchFor=2&goButton=go
-[?] Enter location of Payloadlist (payloads.txt)
-[?] >
-[?] Enter Threads of Testing (4)
-[?] >
-[+] Use Default payloads...
-====================
-Path: http://testphp.vulnweb.com/search.php?test=query
-Method: Post
-Parameter: searchFor
-Payload: <img src="x" onerror="alert(/xss/)">
-Data: searchFor=2<img src="x" onerror="alert(/xss/)">&goButton=go
-====================
-====================
-Path: http://testphp.vulnweb.com/search.php?test=query
-Method: Post
-Parameter: searchFor
-Payload: <script>alert(/xss/)</script>
-Data: searchFor=2<script>alert(/xss/)</script>&goButton=go
-====================
+  Usage: xsscheck <Options>
+	 xsscheck -u www.example.com/xyz.php?a=1
+
+
+  Options:
+
+    -V, --version             output the version number
+    -m, --method [value]      GET/POST Method [GET]
+    -d, --data [value]        POST Data (only POST method)
+    -t, --threads <n>         Threads of Testing
+    -u, --url [value]         Target of URL
+    -r, --payloadfile <path>  location of Payload
+    -h, --help                output usage information
 ```
 
+Example:
+
+```
+node xsscheck.js -u "http://testphp.vulnweb.com/search.php?test=query" -d "searc hFor=1&goButton=go" -t 2 -m "POST"
+```
 
 ## Todo
 

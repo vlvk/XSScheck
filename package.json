@@ -1,18 +1,28 @@
 {
   "name": "xsscheck",
   "version": "1.0.0",
-  "description": "",
+  "description": "XSS scanner by node",
   "main": "xsscheck.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "VLVK",
-  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vlvk/XSScheck.git"
+  },
+  "keywords": [
+    "node"
+  ],
+  "author": "vlvk",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vlvk/XSScheck/issues"
+  },
+  "homepage": "https://github.com/vlvk/XSScheck#readme",
   "dependencies": {
     "async": "^2.5.0",
     "co": "^4.6.0",
     "commander": "^2.11.0",
-    "phantom": "^4.0.5",
-    "readline-sync": "^1.4.7"
+    "phantom": "^4.0.5"
   }
 }
