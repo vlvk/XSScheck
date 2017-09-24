@@ -48,7 +48,7 @@ docker run -it xsscheck
 Example:
 
 ```
-node xsscheck.js -u "http://testphp.vulnweb.com/search.php?test=query" -d "searc hFor=1&goButton=go" -t 2 -m "POST"
+node xsscheck.js -u "http://testphp.vulnweb.com/search.php?test=query" -d "searchFor=1&goButton=go" -t 2 -m "POST"
 ```
 
 ## Todo

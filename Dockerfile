@@ -7,4 +7,4 @@ COPY . /home/node/xsscheck
 RUN chmod +x /home/node/xsscheck/xsscheck.js
 RUN npm install --production
 
-CMD ["./xsscheck", "-h"]
+CMD ["node", "xsscheck.js"]
